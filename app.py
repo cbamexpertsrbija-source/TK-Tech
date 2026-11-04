@@ -41,20 +41,55 @@ else:
     izabrani_radnik = st.selectbox("Izaberite Vaše ime:", opcije_meni)
 
     if izabrani_radnik == "Admin Panel":
-        st.subheader("🔐 Admin Panel")
+        st.subheader("🔐 Admin Panel - Napredni izveštaji")
         admin_pass = st.text_input("Unesite Admin lozinku:", type="password")
         
         if admin_pass == "admin123":
             st.success("Uspešan pristup admin panelu!")
             if os.path.exists(DATA_FILE):
                 df_admin = pd.read_csv(DATA_FILE)
-                st.dataframe(df_admin, use_container_width=True)
-                st.download_button(
-                    "Preuzmi kompletan izveštaj (CSV)", 
-                    df_admin.to_csv(index=False).encode('utf-8'), 
-                    "evidencija_radnog_vremena.csv", 
-                    "text/csv"
-                )
+                if not df_admin.empty:
+                    df_admin['Vreme_dt'] = pd.to_datetime(df_admin['Vreme'], errors='coerce')
+                    df_admin['Mesec'] = df_admin['Vreme_dt'].dt.strftime('%Y-%m')
+                    
+                    st.divider()
+                    st.subheader("📊 Filteri za izveštaje")
+                    
+                    radnici_lista = ["Svi radnici"] + list(korisnici.keys())
+                    filter_radnik = st.selectbox("Filtriraj po radniku:", radnici_lista)
+                    
+                    dostupni_meseci = sorted(df_admin['Mesec'].dropna().unique(), reverse=True)
+                    if not dostupni_meseci:
+                        dostupni_meseci = [datetime.now(ZoneInfo("Europe/Belgrade")).strftime("%Y-%m")]
+                    filter_mesec = st.selectbox("Filtriraj po mesecu:", ["Svi meseci"] + dostupni_meseci)
+                    
+                    df_filtriran = df_admin.copy()
+                    if filter_radnik != "Svi radnici":
+                        df_filtriran = df_filtriran[df_filtriran['Radnik'] == filter_radnik]
+                    if filter_mesec != "Svi meseci":
+                        df_filtriran = df_filtriran[df_filtriran['Mesec'] == filter_mesec]
+                    
+                    st.dataframe(df_filtriran[["Vreme", "Radnik", "Akcija", "Lokacija_OK"]], use_container_width=True)
+                    
+                    if filter_radnik != "Svi radnici":
+                        ukupni_sati = 0.0
+                        prijava_vreme = None
+                        for _, row in df_filtriran.sort_values('Vreme_dt').iterrows():
+                            if row['Akcija'] == 'PRIJAVA':
+                                prijava_vreme = row['Vreme_dt']
+                            elif row['Akcija'] == 'ODJAVA' and prijava_vreme is not None:
+                                razlika = (row['Vreme_dt'] - prijava_vreme).total_seconds() / 3600
+                                if razlika > 0:
+                                    ukupni_sati += razlika
+                                prijava_vreme = None
+                        st.metric(f"Ukupno sati za izabrani period ({filter_radnik})", f"{ukupni_sati:.2f} h")
+                    
+                    st.download_button(
+                        "Preuzmi filtrirani izveštaj (CSV)", 
+                        df_filtriran[["Vreme", "Radnik", "Akcija", "Lokacija_OK"]].to_csv(index=False).encode('utf-8'), 
+                        "evidencija_radnog_vremena_filtrirano.csv", 
+                        "text/csv"
+                    )
         elif admin_pass:
             st.error("Pogrešna admin lozinka!")
 
