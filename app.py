@@ -14,7 +14,7 @@ if not os.path.exists(DATA_FILE):
 st.set_page_config(page_title="Evidencija Radnog Vremena Top Kraft Tech", page_icon="📍", layout="centered")
 
 st.title("📍 Evidencija Radnog Vremena 
-Top Kraft Tech")
+                  Top Kraft Tech")
 st.write("Skenirajte kôd na ulazu, izaberite Vaše ime i evidentirajte dolazak ili odlazak.")
 
 korisnici = {
