@@ -61,8 +61,7 @@ else:
     elif izabrani_radnik != "Izaberite sa spiska...":
         pin = st.text_input("Unesite Vaš PIN kod:", type="password")
 
-        # Provera PIN-a pre nego što dozvolimo prikaz sati i akcija
-         pin_ispravan = (pin == korisnici.get(izabrani_radnik))
+        pin_ispravan = (pin == korisnici.get(izabrani_radnik))
 
         if pin and pin_ispravan:
             st.success("PIN uspešno potvrđen!")
