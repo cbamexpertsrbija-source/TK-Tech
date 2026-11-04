@@ -11,7 +11,7 @@ if not os.path.exists(DATA_FILE):
     df = pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
     df.to_csv(DATA_FILE, index=False)
 
-st.set_page_config(page_title="Evidencija Radnog Vremena", page_icon="📍", layout="centered")
+st.set_page_config(page_title="Evidencija Radnog Vremena Top Kraft Tech", page_icon="📍", layout="centered")
 
 st.title("📍 Evidencija Radnog Vremena")
 st.write("Skenirajte kôd na ulazu, izaberite Vaše ime i evidentirajte dolazak ili odlazak.")
