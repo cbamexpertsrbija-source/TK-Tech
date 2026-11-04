@@ -24,7 +24,18 @@ st.title("⏱️ Evidencija Radnog Vremena")
 st.write("Skenirajte kôd na ulazu, izaberite Vaše ime i evidentirajte dolazak ili odlazak.")
 
 # Lista radnika (možete je kasnije proširiti)
-radnici = ["Marko Marković", "Petar Petrović", "Jovana Jovanić"]
+korisnici = {
+    "Nikolić Nenad kr": "1111",
+    "Stojanović Jugoslav": "2222",
+    "Momčilović Ljubiša": "3344",
+    "Timotijević Milosav": "4444",
+    "Živadinović Milisav": "5555",
+    "Nikolić Zoran": "6666",
+    "Rakić Aleksandar": "7777",
+    "Mirić Miljan": "8888",
+    "Nikolić Nenad Bres": "9999"
+}
+radnici = list(korisnici.keys())
 izabrani_radnik = st.selectbox("Izaberite Vaše ime:", radnici)
 
 # Unos PIN-a radi sigurnosti
