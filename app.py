@@ -60,60 +60,61 @@ else:
 
     elif izabrani_radnik != "Izaberite sa spiska...":
         pin = st.text_input("Unesite Vaš PIN kod:", type="password")
-        
-        if os.path.exists(DATA_FILE):
-            df_all = pd.read_csv(DATA_FILE)
-            if not df_all.empty:
-                df_all['Vreme_dt'] = pd.to_datetime(df_all['Vreme'], errors='coerce')
-                trenutni_mesec = datetime.now(ZoneInfo("Europe/Belgrade")).strftime("%Y-%m")
-                
-                df_radnik = df_all[(df_all['Radnik'] == izabrani_radnik) & (df_all['Vreme_dt'].dt.strftime("%Y-%m") == trenutni_mesec)]
-                
-                if not df_radnik.empty:
-                    st.info(f"📅 Vaša evidencija i sati za tekući mesec ({trenutni_mesec}):")
-                    st.dataframe(df_radnik[["Vreme", "Akcija", "Lokacija_OK"]], use_container_width=True)
+
+        # Provera PIN-a pre nego što dozvolimo prikaz sati i akcija
+         pin_ispravan = (pin == korisnici.get(izabrani_radnik))
+
+        if pin and pin_ispravan:
+            st.success("PIN uspešno potvrđen!")
+
+            if os.path.exists(DATA_FILE):
+                df_all = pd.read_csv(DATA_FILE)
+                if not df_all.empty:
+                    df_all['Vreme_dt'] = pd.to_datetime(df_all['Vreme'], errors='coerce')
+                    trenutni_mesec = datetime.now(ZoneInfo("Europe/Belgrade")).strftime("%Y-%m")
                     
-                    ukupni_sati = 0.0
-                    prijava_vreme = None
-                    for _, row in df_radnik.sort_values('Vreme_dt').iterrows():
-                        if row['Akcija'] == 'PRIJAVA':
-                            prijava_vreme = row['Vreme_dt']
-                        elif row['Akcija'] == 'ODJAVA' and prijava_vreme is not None:
-                            razlika = (row['Vreme_dt'] - prijava_vreme).total_seconds() / 3600
-                            if razlika > 0:
-                                ukupni_sati += razlika
-                            prijava_vreme = None
-                    st.metric("Ukupno sati ovog meseca", f"{ukupni_sati:.2f} h")
+                    df_radnik = df_all[(df_all['Radnik'] == izabrani_radnik) & (df_all['Vreme_dt'].dt.strftime("%Y-%m") == trenutni_mesec)]
+                    
+                    if not df_radnik.empty:
+                        st.info(f"📅 Vaša evidencija i sati za tekući mesec ({trenutni_mesec}):")
+                        st.dataframe(df_radnik[["Vreme", "Akcija", "Lokacija_OK"]], use_container_width=True)
+                        
+                        ukupni_sati = 0.0
+                        prijava_vreme = None
+                        for _, row in df_radnik.sort_values('Vreme_dt').iterrows():
+                            if row['Akcija'] == 'PRIJAVA':
+                                prijava_vreme = row['Vreme_dt']
+                            elif row['Akcija'] == 'ODJAVA' and prijava_vreme is not None:
+                                razlika = (row['Vreme_dt'] - prijava_vreme).total_seconds() / 3600
+                                if razlika > 0:
+                                    ukupni_sati += razlika
+                                prijava_vreme = None
+                        st.metric("Ukupno sati ovog meseca", f"{ukupni_sati:.2f} h")
 
-        st.divider()
-        st.subheader("📍 Provera lokacije")
-        st.write("Kliknite na dugme ispod da očitate GPS lokaciju sa vašeg uređaja:")
-        
-        location = streamlit_geolocation()
-        
-        lokacija_ok = False
-        if location and location.get('latitude') and location.get('longitude'):
-            lat = location['latitude']
-            lon = location['longitude']
-            st.success(f"Lokacija uspešno učitana (Lat: {lat:.4f}, Lon: {lon:.4f})")
-            lokacija_ok = True
-        else:
-            st.info("Molimo sačekajte da se GPS lokacija očitava ili osvežite stranicu ako je potrebno.")
-
-        st.divider()
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            btn_prijava = st.button("🟢 PRIJAVA (Dolazak)", use_container_width=True)
-        with col2:
-            btn_odjava = st.button("🔴 ODJAVA (Odlazak)", use_container_width=True)
+            st.divider()
+            st.subheader("📍 Provera lokacije")
+            st.write("Kliknite na dugme ispod da očitate GPS lokaciju sa vašeg uređaja:")
             
-        if btn_prijava or btn_odjava:
-            if not pin:
-                st.error("Molimo unesite Vaš PIN kod!")
-            elif pin != korisnici.get(izabrani_radnik):
-                st.error("Pogrešan PIN kod! Unesite ispravan PIN za izabranog radnika.")
+            location = streamlit_geolocation()
+            
+            lokacija_ok = False
+            if location and location.get('latitude') and location.get('longitude'):
+                lat = location['latitude']
+                lon = location['longitude']
+                st.success(f"Lokacija uspešno učitana (Lat: {lat:.4f}, Lon: {lon:.4f})")
+                lokacija_ok = True
             else:
+                st.info("Molimo sačekajte da se GPS lokacija očitava ili osvežite stranicu ako je potrebno.")
+
+            st.divider()
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                btn_prijava = st.button("🟢 PRIJAVA (Dolazak)", use_container_width=True)
+            with col2:
+                btn_odjava = st.button("🔴 ODJAVA (Odlazak)", use_container_width=True)
+                
+            if btn_prijava or btn_odjava:
                 akcija = "PRIJAVA" if btn_prijava else "ODJAVA"
                 vreme_sada = datetime.now(ZoneInfo("Europe/Belgrade")).strftime("%Y-%m-%d %H:%M:%S")
                 
@@ -126,3 +127,6 @@ else:
                 
                 st.session_state.uspesno_evidentirano = True
                 st.rerun()
+
+        elif pin and not pin_ispravan:
+            st.error("Pogrešan PIN kod! Unesite ispravan PIN za izabranog radnika.")
