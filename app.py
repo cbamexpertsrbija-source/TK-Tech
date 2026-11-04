@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from streamlit_geolocation import streamlit_geolocation
@@ -11,9 +12,9 @@ if not os.path.exists(DATA_FILE):
     df = pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
     df.to_csv(DATA_FILE, index=False)
 
-st.set_page_config(page_title="Evidencija Radnog Vremena Top Kraft Tech", page_icon="📍", layout="centered")
+st.set_page_config(page_title="Evidencija Radnog Vremena", page_icon="📍", layout="centered")
 
-st.title("📍 Evidencija Radnog Vremena Top Kraft Tech")
+st.title("📍 Evidencija Radnog Vremena")
 st.write("Skenirajte kôd na ulazu, izaberite Vaše ime i evidentirajte dolazak ili odlazak.")
 
 korisnici = {
@@ -53,6 +54,30 @@ if izabrani_radnik == "Admin Panel":
 elif izabrani_radnik != "Izaberite sa spiska...":
     pin = st.text_input("Unesite Vaš PIN kod:", type="password")
     
+    if os.path.exists(DATA_FILE):
+        df_all = pd.read_csv(DATA_FILE)
+        if not df_all.empty:
+            df_all['Vreme_dt'] = pd.to_datetime(df_all['Vreme'], errors='coerce')
+            trenutni_mesec = datetime.now(ZoneInfo("Europe/Belgrade")).strftime("%Y-%m")
+            
+            df_radnik = df_all[(df_all['Radnik'] == izabrani_radnik) & (df_all['Vreme_dt'].dt.strftime("%Y-%m") == trenutni_mesec)]
+            
+            if not df_radnik.empty:
+                st.info(f"📅 Vaša evidencija i sati za tekući mesec ({trenutni_mesec}):")
+                st.dataframe(df_radnik[["Vreme", "Akcija", "Lokacija_OK"]], use_container_width=True)
+                
+                ukupni_sati = 0.0
+                prijava_vreme = None
+                for _, row in df_radnik.sort_values('Vreme_dt').iterrows():
+                    if row['Akcija'] == 'PRIJAVA':
+                        prijava_vreme = row['Vreme_dt']
+                    elif row['Akcija'] == 'ODJAVA' and prijava_vreme is not None:
+                        razlika = (row['Vreme_dt'] - prijava_vreme).total_seconds() / 3600
+                        if razlika > 0:
+                            ukupni_sati += razlika
+                        prijava_vreme = None
+                st.metric("Ukupno sati ovog meseca", f"{ukupni_sati:.2f} h")
+
     st.divider()
     st.subheader("📍 Provera lokacije")
     st.write("Kliknite na dugme ispod da očitate GPS lokaciju sa vašeg uređaja:")
@@ -93,3 +118,5 @@ elif izabrani_radnik != "Izaberite sa spiska...":
             df_novo.to_csv(DATA_FILE, index=False)
             
             st.success(f"Uspešno zabeleženo: {akcija} za radnika {izabrani_radnik} u {vreme_sada}!")
+            time.sleep(2)
+            st.rerun()
