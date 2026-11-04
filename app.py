@@ -20,7 +20,7 @@ korisnici = {
     "Blagojević Vladica": "0000",
     "Nikolić Nenad kr": "1111",
     "Stojanović Jugoslav": "2222",
-    "Momčilović Ljubiša": "3344",
+    "Momčilović Ljubiša": "3333",
     "Timotijević Milosav": "4444",
     "Živadinović Milisav": "5555",
     "Nikolić Zoran": "6666",
