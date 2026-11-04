@@ -21,7 +21,7 @@ korisnici = {
     "Blagojević Vladica": "0000",
     "Nikolić Nenad kr": "1111",
     "Stojanović Jugoslav": "2222",
-    "Momčilović Ljubiša": "3344",
+    "Momčilović Ljubiša": "3333",
     "Timotijević Milosav": "4444",
     "Živadinović Milisav": "5555",
     "Nikolić Zoran": "6666",
@@ -54,6 +54,9 @@ if izabrani_radnik == "Admin Panel":
 elif izabrani_radnik != "Izaberite sa spiska...":
     pin = st.text_input("Unesite Vaš PIN kod:", type="password")
     
+    dozvoljen_unos = True
+    poslednja_akcija vreme_poslednje = None
+
     if os.path.exists(DATA_FILE):
         df_all = pd.read_csv(DATA_FILE)
         if not df_all.empty:
@@ -78,6 +81,20 @@ elif izabrani_radnik != "Izaberite sa spiska...":
                         prijava_vreme = None
                 st.metric("Ukupno sati ovog meseca", f"{ukupni_sati:.2f} h")
 
+                # Provera da li je poslednji unos bio pre manje od 5 minuta (sprečavanje duplog unosa)
+                poslednji_red = df_radnik.sort_values('Vreme_dt', ascending=False).iloc[0]
+                vreme_poslednje = poslednji_red['Vreme_dt']
+                sada_beograd = datetime.now(ZoneInfo("Europe/Belgrade"))
+                
+                # Konverzija u timezone-aware ukoliko je potrebno
+                if vreme_poslednje.tzinfo is None:
+                    vreme_poslednje = vreme_poslednje.replace(tzinfo=ZoneInfo("Europe/Belgrade"))
+                
+                razlika_minuta = (sada_beograd - vreme_poslednje).total_seconds() / 60
+                if razlika_minuta < 5:
+                    dozvoljen_unos = False
+                    st.warning(f"⚠️ Već ste zabeležili unos u poslednjih 5 minuta ({poslednji_red['Akcija']} u {poslednji_red['Vreme']}). Molimo sačekajte pre sledećeg unosa.")
+
     st.divider()
     st.subheader("📍 Provera lokacije")
     st.write("Kliknite na dugme ispod da očitate GPS lokaciju sa vašeg uređaja:")
@@ -97,9 +114,9 @@ elif izabrani_radnik != "Izaberite sa spiska...":
     
     col1, col2 = st.columns(2)
     with col1:
-        btn_prijava = st.button("🟢 PRIJAVA (Dolazak)", use_container_width=True)
+        btn_prijava = st.button("🟢 PRIJAVA (Dolazak)", use_container_width=True, disabled=not dozvoljen_unos)
     with col2:
-        btn_odjava = st.button("🔴 ODJAVA (Odlazak)", use_container_width=True)
+        btn_odjava = st.button("🔴 ODJAVA (Odlazak)", use_container_width=True, disabled=not dozvoljen_unos)
         
     if btn_prijava or btn_odjava:
         if not pin:
