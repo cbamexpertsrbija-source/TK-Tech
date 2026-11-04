@@ -1,15 +1,8 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import os
-import math
+from datetime import datetime
 from streamlit_geolocation import streamlit_geolocation
-
-# --- KONFIGURACIJA LOKACIJE FIRME ---
-# Unesite tačnu geografsku širinu i dužinu vaše firme
-FIRMA_LAT = 43.3117417  # Primer (Zamenite vašim koordinatama)
-FIRMA_LON = 21.7936907  # Primer (Zamenite vašim koordinatama)
-DOZVOLJENA_DISTANCA_METARA = 150  # Radnik mora biti unutar ovog kruga (u metrima)
 
 DATA_FILE = "evidencija.csv"
 
@@ -18,15 +11,13 @@ if not os.path.exists(DATA_FILE):
     df = pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
     df.to_csv(DATA_FILE, index=False)
 
-st.set_page_config(page_title="Evidencija Radnog Vremena", page_icon="⏱️", layout="centered")
+st.set_page_config(page_title="Evidencija Radnog Vremena", page_icon="📍", layout="centered")
 
-st.title("⏱️ Evidencija Radnog Vremena")
+st.title("📍 Evidencija Radnog Vremena")
 st.write("Skenirajte kôd na ulazu, izaberite Vaše ime i evidentirajte dolazak ili odlazak.")
 
-# Lista radnika (možete je kasnije proširiti)
+# Spisak radnika i njihovih jedinstvenih PIN kodova
 korisnici = {
-    "Blagojević Vladica": "0000",
-    "Blagojević Violeta": "1010",
     "Nikolić Nenad kr": "1111",
     "Stojanović Jugoslav": "2222",
     "Momčilović Ljubiša": "3344",
@@ -37,79 +28,74 @@ korisnici = {
     "Mirić Miljan": "8888",
     "Nikolić Nenad Bres": "9999"
 }
-radnici = list(korisnici.keys())
-izabrani_radnik = st.selectbox("Izaberite Vaše ime:", radnici)
 
-# Unos PIN-a radi sigurnosti
-pin = st.text_input("Unesite Vaš PIN kod:", type="password")
+# Opcije za padajući meni (dodat Admin Panel na početku)
+opcije_meni = ["Izaberite sa spiska...", "Admin Panel"] + list(korisnici.keys())
+izabrani_radnik = st.selectbox("Izaberite Vaše ime:", opcije_meni)
 
-st.divider()
-st.subheader("📍 Provera lokacije")
-st.write("Kliknite na dugme ispod da očitate GPS lokaciju sa vašeg telefona:")
-
-# Dobijanje GPS lokacije uređaja preko Streamlit komponente
-location = streamlit_geolocation()
-
-# Funkcija za računanje razdaljine u metrima (Haversine formula)
-def izracunaj_rastojanje(lat1, lon1, lat2, lon2):
-    R = 6371000  # Radijus Zemlje u metrima
-    phi1 = math.radians(lat1)
-    phi2 = math.radians(lat2)
-    delta_phi = math.radians(lat2 - lat1)
-    delta_lambda = math.radians(lon2 - lon1)
-
-    a = math.sin(delta_phi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    return R * c
-
-lokacija_validna = False
-
-if location.get('latitude') and location.get('longitude'):
-    korisnik_lat = location['latitude']
-    korisnik_lon = location['longitude']
+# Provera da li je izabran Admin Panel
+if izabrani_radnik == "Admin Panel":
+    st.subheader("🔐 Admin Panel")
+    admin_pass = st.text_input("Unesite Admin lozinku:", type="password")
     
-    rastojanje = izracunaj_rastojanje(korisnik_lat, korisnik_lon, FIRMA_LAT, FIRMA_LON)
-    
-    if rastojanje <= DOZVOLJENA_DISTANCA_METARA:
-        st.success(f"✅ Nalazite se na lokaciji firme (Udaljenost: {round(rastojanje)}m).")
-        lokacija_validna = True
-    else:
-        st.error(f"❌ Nalazite se van lokacije firme! (Udaljenost: {round(rastojanje)}m). Prijava nije dozvoljena.")
-else:
-    st.info("Molimo sačekajte ili osvežite stranicu da bi GPS očitao vašu lokaciju.")
-
-st.divider()
-
-col1, col2 = st.columns(2)
-
-with col1:
-    if st.button("🟢 PRIJAVA (Dolazak)", use_container_width=True, disabled=not lokacija_validna):
-        if pin == "1234":  # Primer PIN-a (možete promeniti po želji)
-            vreme = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            novi_unos = pd.DataFrame([[vreme, izabrani_radnik, "Dolazak", "Da"]], 
-                                     columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
-            novi_unos.to_csv(DATA_FILE, mode='a', header=False, index=False)
-            st.success(f"Uspešno evidentiran DOLAZAK u {vreme}")
-        else:
-            st.error("Pogrešan PIN kod!")
-
-with col2:
-    if st.button("🔴 ODJAVA (Odlazak)", use_container_width=True, disabled=not lokacija_validna):
-        if pin == "1234":
-            vreme = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            novi_unos = pd.DataFrame([[vreme, izabrani_radnik, "Odlazak", "Da"]], 
-                                     columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
-            novi_unos.to_csv(DATA_FILE, mode='a', header=False, index=False)
-            st.warning(f"Uspešno evidentiran ODLAZAK u {vreme}")
-        else:
-            st.error("Pogrešan PIN kod!")
-
-# --- ADMIN PANEL ---
-st.divider()
-with st.expander("📊 Pregled evidencije (Samo za administratora)"):
-    admin_pass = st.text_input("Admin lozinka:", type="password", key="admin_pwd")
+    # Možete promeniti admin lozinku ovde po želji (trenutno je "admin123")
     if admin_pass == "admin123":
+        st.success("Uspešan pristup admin panelu!")
         if os.path.exists(DATA_FILE):
-            df_log = pd.read_csv(DATA_FILE)
-            st.dataframe(df_log, use_container_width=True)
-            st.download_button("Preuzmi izveštaj (CSV)", df_log.to_csv(index=False), "evidencija.csv", "text/csv")
+            df_admin = pd.read_csv(DATA_FILE)
+            st.dataframe(df_admin, use_container_width=True)
+            st.download_button(
+                "Preuzmi kompletan izveštaj (CSV)", 
+                df_admin.to_csv(index=False).encode('utf-8'), 
+                "evidencija_radnog_vremena.csv", 
+                "text/csv"
+            )
+    elif admin_pass:
+        st.error("Pogrešna admin lozinka!")
+
+# Standardna prijava za radnike
+elif izabrani_radnik != "Izaberite sa spiska...":
+    pin = st.text_input("Unesite Vaš PIN kod:", type="password")
+    
+    st.divider()
+    st.subheader("📍 Provera lokacije")
+    st.write("Kliknite na dugme ispod da očitate GPS lokaciju sa vašeg uređaja:")
+    
+    # Poziv geolokacije
+    location = streamlit_geolocation()
+    
+    lokacija_ok = False
+    if location and location.get('latitude') and location.get('longitude'):
+        lat = location['latitude']
+        lon = location['longitude']
+        st.success(f"Lokacija uspešno učitana (Lat: {lat:.4f}, Lon: {lon:.4f})")
+        lokacija_ok = True
+    else:
+        st.info("Molimo sačekajte da se GPS lokacija očitava ili osvežite stranicu ako je potrebno.")
+
+    st.divider()
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        btn_prijava = st.button("🟢 PRIJAVA (Dolazak)", use_container_width=True)
+    with col2:
+        btn_odjava = st.button("🔴 ODJAVA (Odlazak)", use_container_width=True)
+        
+    if btn_prijava or btn_odjava:
+        if not pin:
+            st.error("Molimo unesite Vaš PIN kod!")
+        elif pin != korisnici.get(izabrani_radnik):
+            st.error("Pogrešan PIN kod! Unesite ispravan PIN za izabranog radnika.")
+        else:
+            akcija = "PRIJAVA" if btn_prijava else "ODJAVA"
+            vreme_sada = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            # Upis u CSV bazu
+            nov_red = pd.DataFrame([[vreme_sada, izabrani_radnik, akcija, lokacija_ok]], 
+                                   columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
+            
+            df_postojece = pd.read_csv(DATA_FILE)
+            df_novo = pd.concat([df_postojece, nov_red], ignore_index=True)
+            df_novo.to_csv(DATA_FILE, index=False)
+            
+            st.success(f"Uspešno zabeleženo: {akcija} za radnika {izabrani_radnik} u {vreme_sada}!")
