@@ -18,6 +18,7 @@ st.write("Skenirajte kôd na ulazu, izaberite Vaše ime i evidentirajte dolazak 
 
 # Spisak radnika i njihovih jedinstvenih PIN kodova
 korisnici = {
+    "Blagojević Vladica": "0000",
     "Nikolić Nenad kr": "1111",
     "Stojanović Jugoslav": "2222",
     "Momčilović Ljubiša": "3344",
