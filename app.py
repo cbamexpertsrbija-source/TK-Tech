@@ -25,6 +25,8 @@ st.write("Skenirajte kôd na ulazu, izaberite Vaše ime i evidentirajte dolazak 
 
 # Lista radnika (možete je kasnije proširiti)
 korisnici = {
+    "Blagojević Vladica": "0000",
+    "Blagojević Violeta": "1010",
     "Nikolić Nenad kr": "1111",
     "Stojanović Jugoslav": "2222",
     "Momčilović Ljubiša": "3344",
