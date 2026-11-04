@@ -55,7 +55,6 @@ elif izabrani_radnik != "Izaberite sa spiska...":
     pin = st.text_input("Unesite Vaš PIN kod:", type="password")
     
     dozvoljen_unos = True
-    poslednja_akcija vreme_poslednje = None
 
     if os.path.exists(DATA_FILE):
         df_all = pd.read_csv(DATA_FILE)
@@ -81,12 +80,10 @@ elif izabrani_radnik != "Izaberite sa spiska...":
                         prijava_vreme = None
                 st.metric("Ukupno sati ovog meseca", f"{ukupni_sati:.2f} h")
 
-                # Provera da li je poslednji unos bio pre manje od 5 minuta (sprečavanje duplog unosa)
                 poslednji_red = df_radnik.sort_values('Vreme_dt', ascending=False).iloc[0]
                 vreme_poslednje = poslednji_red['Vreme_dt']
                 sada_beograd = datetime.now(ZoneInfo("Europe/Belgrade"))
                 
-                # Konverzija u timezone-aware ukoliko je potrebno
                 if vreme_poslednje.tzinfo is None:
                     vreme_poslednje = vreme_poslednje.replace(tzinfo=ZoneInfo("Europe/Belgrade"))
                 
