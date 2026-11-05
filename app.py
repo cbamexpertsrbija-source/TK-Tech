@@ -13,9 +13,9 @@ from streamlit_geolocation import streamlit_geolocation
 TELEGRAM_BOT_TOKEN = "9092555598:AAFwtK5E6sH_yk8DSkKBKvc-1DAvseh5gHM"
 TELEGRAM_CHAT_ID = "9167363271"
 
-# Koordinate vaše firme (Unesite tačne koordinate lokacije)
-FIRMA_LAT = 43.2381 
-FIRMA_LON = 21.5881
+# Tačne koordinate za Top Kraft Tech (izvučene iz Google Maps linka)
+FIRMA_LAT = 43.3117532
+FIRMA_LON = 21.7931703
 DOZVOLJENI_RADIJUS_METARA = 150  # Dozvoljeni radijus u metrima
 
 def posalji_telegram_poruku(tekst):
@@ -113,7 +113,6 @@ else:
                         df_admin['Mesec'] = df_admin['Vreme_dt'].dt.strftime('%Y-%m')
                         
                         st.subheader("⚠️ Detekcija propuštenih (zaboravljenih) odjava")
-                        # Provera zaboravljenih odjava
                         zaboravljene = []
                         for radnik in korisnici.keys():
                             df_r = df_admin[df_admin['Radnik'] == radnik].sort_values('Vreme_dt')
@@ -123,11 +122,10 @@ else:
                                     otvorena_prijava = row['Vreme_dt']
                                 elif row['Akcija'] == 'ODJAVA':
                                     otvorena_prijava = None
-                            # Ako je poslednja akcija bila prijava a prošao je dan
                             if otvorena_prijava is not None:
                                 danas = datetime.now(ZoneInfo("Europe/Belgrade")).replace(hour=0, minute=0, second=0, microsecond=0)
                                 if otvorena_prijava.tz_localize(None) < danas.replace(tzinfo=None):
-                                    zaboravljene.append({"Radnik": radnik, poslednja_prijava: otvorena_prijava})
+                                    zaboravljene.append({"Radnik": radnik, "poslednja_prijava": otvorena_prijava})
                         
                         if zaboravljene:
                             st.warning("Pronađeni radnici sa nezavršenim smenama iz prethodnih dana:")
@@ -191,7 +189,7 @@ else:
                             novi_red_w = pd.DataFrame([[novi_ime, novi_pin]], columns=["Radnik", "PIN"])
                             df_w_current = pd.concat([df_w_current, novi_red_w], ignore_index=True)
                             df_w_current.to_csv(WORKERS_FILE, index=False)
-                            st.success(f"Uspesno dodat radnik: {novi_ime}")
+                            st.success(f"Uspešno dodat radnik: {novi_ime}")
                             st.rerun()
                     else:
                         st.error("Unesite ime i validan PIN od 4 cifre.")
@@ -252,7 +250,7 @@ else:
                 lat = location['latitude']
                 lon = location['longitude']
                 
-                # Izračunavanje udaljenosti od firme
+                # Izračunavanje udaljenosti od firme (Top Kraft Tech)
                 udaljenost = izracunaj_udaljenost(lat, lon, FIRMA_LAT, FIRMA_LON)
                 
                 if udaljenost <= DOZVOLJENI_RADIJUS_METARA:
