@@ -114,6 +114,8 @@ else:
                         
                         st.subheader("⚠️ Detekcija propuštenih (zaboravljenih) odjava")
                         zaboravljene = []
+                        trenutno_vreme = datetime.now(ZoneInfo("Europe/Belgrade"))
+                        
                         for radnik in korisnici.keys():
                             df_r = df_admin[df_admin['Radnik'] == radnik].sort_values('Vreme_dt')
                             otvorena_prijava = None
@@ -122,17 +124,18 @@ else:
                                     otvorena_prijava = row['Vreme_dt']
                                 elif row['Akcija'] == 'ODJAVA':
                                     otvorena_prijava = None
-                            if otvorena_prijava is not None:
-                                danas = datetime.now(ZoneInfo("Europe/Belgrade")).replace(hour=0, minute=0, second=0, microsecond=0)
-                                if otvorena_prijava.tz_localize(None) < danas.replace(tzinfo=None):
-                                    zaboravljene.append({"Radnik": radnik, "poslednja_prijava": otvorena_prijava})
+                            
+                            if otvorena_prijava is not None and pd.notnull(otvorena_prijava):
+                                razlika_sati = (trenutno_vreme.replace(tzinfo=None) - otvorena_prijava.replace(tzinfo=None)).total_seconds() / 3600
+                                if razlika_sati > 12:
+                                    zaboravljene.append({"Radnik": radnik, "poslednja_prijava": otvorena_prijava, "trajanje_h": razlika_sati})
                         
                         if zaboravljene:
-                            st.warning("Pronađeni radnici sa nezavršenim smenama iz prethodnih dana:")
+                            st.warning("Pronađeni radnici sa nezavršenim smenama (prijava traje duže od 12 sati):")
                             for z in zaboravljene:
-                                st.write(f"- **{z['Radnik']}** (Prijava od: {z['poslednja_prijava']})")
+                                st.write(f"- **{z['Radnik']}** (Prijava od: `{z['poslednja_prijava']}`, otvoren pre `{z['trajanje_h']:.1f}` h)")
                         else:
-                            st.info("Nema zaboravljenih odjava. Svi radnici su uredno zatvorili smene.")
+                            st.info("Nema zaboravljenih odjava. Sve aktivne smene su u okviru normalnog vremena.")
 
                         st.divider()
                         st.subheader("📊 Filteri i sati")
