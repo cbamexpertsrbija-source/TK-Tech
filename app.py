@@ -43,7 +43,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def ucitaj_evidenciju():
     try:
-        df = conn.read(ttl=0)
+        df = conn.read(worksheet="Sheet1", ttl=0)
         return df
     except Exception:
         return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
@@ -52,7 +52,7 @@ def dodaj_u_evidenciju(vreme, radnik, akcija, lokacija_ok):
     df_postojece = ucitaj_evidenciju()
     novi_red = pd.DataFrame([[vreme, radnik, akcija, lokacija_ok]], columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
     df_novo = pd.concat([df_postojece, novi_red], ignore_index=True)
-    conn.update(data=df_novo)
+    conn.update(worksheet="Sheet1", data=df_novo)
 
 # ---------------------------------------------------------
 # UPRAVLJANJE RADNICIMA
