@@ -44,15 +44,25 @@ def izracunaj_udaljenost(lat1, lon1, lat2, lon2):
 # ---------------------------------------------------------
 def ucitaj_evidenciju():
     try:
+        # Čitanje tabele direktno preko javnog CSV izvoza (bez gspread autentifikacije)
         csv_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1"
         df = pd.read_csv(csv_url)
-        df.columns = [col.strip().capitalize() for col in df.columns]
-        if 'Lokacija_ok' in df.columns:
-            df = df.rename(columns={'Lokacija_ok': 'Lokacija_OK'})
         return df
-    except Exception as e:
-        print(f"Greška pri čitanju tabele: {e}")
+    except Exception:
         return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
+
+def dodaj_u_evidenciju(vreme, radnik, akcija, lokacija_ok):
+    payload = {
+        "vreme": str(vreme),
+        "radnik": str(radnik),
+        "akcija": str(akcija),
+        "lokacija_ok": str(lokacija_ok)
+    }
+    try:
+        requests.post(APPS_SCRIPT_URL, json=payload, timeout=10)
+    except Exception as e:
+        print(f"Greška pri upisu u Google Sheets: {e}")
+
 # ---------------------------------------------------------
 # UPRAVLJANJE RADNICIMA
 # ---------------------------------------------------------
