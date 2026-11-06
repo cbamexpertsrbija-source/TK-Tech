@@ -17,7 +17,7 @@ FIRMA_LAT = 43.3117532
 FIRMA_LON = 21.7931703
 DOZVOLJENI_RADIJUS_METARA = 150
 
-# Vaš Google Apps Script Web App URL za upis podataka
+# Vaš Google Apps Script Web App URL za upis i čitanje podataka
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby335mchyyfn44pxpT2thYPMuLqtVvzkzjJ5dfaJ4IrmKkbkCBWo-047k3E8whxc3sB7w/exec"
 SPREADSHEET_ID = "1HZFg7Sff3buVpCfXv3B4WDOM6xj6l-GLLorCSzmHs"
 
@@ -44,17 +44,13 @@ def izracunaj_udaljenost(lat1, lon1, lat2, lon2):
 # ---------------------------------------------------------
 def ucitaj_evidenciju():
     try:
-        # Direktan i pouzdan export Google tabele u CSV format
         csv_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid=0"
         df = pd.read_csv(csv_url)
         
         if df.empty or len(df.columns) < 4:
             return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
         
-        # Očistimo nazive kolona od eventualnih razmaka
         df.columns = [str(col).strip() for col in df.columns]
-        
-        # Mapiramo kolone bez obzira na mala/velika slova
         rename_map = {}
         for col in df.columns:
             lower_col = col.lower()
@@ -72,6 +68,7 @@ def ucitaj_evidenciju():
     except Exception as e:
         print(f"Greška pri čitanju tabele: {e}")
         return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
+
 def dodaj_u_evidenciju(vreme, radnik, akcija, lokacija_ok):
     payload = {
         "vreme": str(vreme),
@@ -190,6 +187,7 @@ else:
                     
                     st.dataframe(df_filtriran[["Vreme", "Radnik", "Akcija", "Lokacija_OK"]], use_container_width=True)
                     
+                    # Pojedinačni sati za izabranog radnika
                     if filter_radnik != "Svi radnici":
                         ukupni_sati = 0.0
                         prijava_vreme = None
@@ -202,6 +200,37 @@ else:
                                     ukupni_sati += razlika
                                 prijava_vreme = None
                         st.metric(f"Ukupno sati ({filter_radnik})", f"{ukupni_sati:.2f} h")
+
+                    st.divider()
+                    # Zbirni pregled sati za sve radnike odjednom
+                    st.subheader("⏱️ Zbirni pregled odrađenih sati po radnicima")
+                    df_zbirni_izvor = df_admin.copy()
+                    if filter_mesec != "Svi meseci":
+                        df_zbirni_izvor = df_zbirni_izvor[df_zbirni_izvor['Mesec'] == filter_mesec]
+                    
+                    zbirni_podaci = []
+                    for radnik_ime in korisnici.keys():
+                        df_r_sati = df_zbirni_izvor[df_zbirni_izvor['Radnik'] == radnik_ime].sort_values('Vreme_dt')
+                        ukupni_sati_r = 0.0
+                        prijava_vreme_r = None
+                        
+                        for _, row in df_r_sati.iterrows():
+                            if row['Akcija'] == 'PRIJAVA':
+                                prijava_vreme_r = row['Vreme_dt']
+                            elif row['Akcija'] == 'ODJAVA' and prijava_vreme_r is not None:
+                                razlika = (row['Vreme_dt'] - prijava_vreme_r).total_seconds() / 3600
+                                if razlika > 0:
+                                    ukupni_sati_r += razlika
+                                prijava_vreme_r = None
+                                
+                        if ukupni_sati_r > 0:
+                            zbirni_podaci.append({"Radnik": radnik_ime, "Ukupno Sati": round(ukupni_sati_r, 2)})
+                    
+                    if zbirni_podaci:
+                        df_zbirno = pd.DataFrame(zbirni_podaci)
+                        st.dataframe(df_zbirno, use_container_width=True)
+                    else:
+                        st.info("Nema završenih smena za izabrani period.")
 
             with tab2:
                 st.subheader("👥 Dodavanje i brisanje radnika")
@@ -271,10 +300,8 @@ else:
                 akcija = "PRIJAVA" if btn_prijava else "ODJAVA"
                 vreme_sada = datetime.now(ZoneInfo("Europe/Belgrade")).strftime("%Y-%m-%d %H:%M:%S")
                 
-                # Upis u Google Sheets
                 dodaj_u_evidenciju(vreme_sada, izabrani_radnik, akcija, lokacija_ok)
                 
-                # Telegram obaveštenje
                 emoji_akcija = "🟢 PRIJAVA" if akcija == "PRIJAVA" else "🔴 ODJAVA"
                 poruka_telegram = (
                     f"**{emoji_akcija} - Top Kraft Tech**\n\n"
