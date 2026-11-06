@@ -24,11 +24,18 @@ SPREADSHEET_ID = "1HZFg7Sff3buVpCfXv3B4WDOM6xj6l-GLLorCSzmHs"
 def posalji_telegram_poruku(tekst):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": tekst}
-    response = requests.post(url, json=payload, timeout=5)
-    # Ovo će izbaciti grešku direktno na ekranu ako nešto nije u redu sa tokenom ili chat ID-jem
-    if response.status_code != 200:
-        st.error(f"Telegram greška: {response.text}")
-        
+    try:
+        response = requests.post(url, json=payload, timeout=5)
+        if response.status_code != 200:
+            st.session_state.telegram_greska = response.text
+        else:
+            st.session_state.telegram_greska = None
+    except Exception as e:
+        st.session_state.telegram_greska = str(e)
+
+        if 'telegram_greska' in st.session_state and st.session_state.telegram_greska:
+    st.error(f"Telegram greška: {st.session_state.telegram_greska}")
+    
 def izracunaj_udaljenost(lat1, lon1, lat2, lon2):
     R = 6371000
     phi1 = math.radians(lat1)
