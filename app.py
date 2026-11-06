@@ -22,13 +22,13 @@ APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby335mchyyfn44pxpT2th
 SPREADSHEET_ID = "1HZFg7Sff3buVpCfXv3B4WDOM6xj6l-GLLorCSzmHs"
 
 def posalji_telegram_poruku(tekst):
-    try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": tekst}
-        requests.post(url, json=payload, timeout=5)
-    except Exception as e:
-        print(f"Greška pri slanju Telegram obaveštenja: {e}")
-
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": tekst}
+    response = requests.post(url, json=payload, timeout=5)
+    # Ovo će izbaciti grešku direktno na ekranu ako nešto nije u redu sa tokenom ili chat ID-jem
+    if response.status_code != 200:
+        st.error(f"Telegram greška: {response.text}")
+        
 def izracunaj_udaljenost(lat1, lon1, lat2, lon2):
     R = 6371000
     phi1 = math.radians(lat1)
