@@ -10,7 +10,7 @@ from streamlit_geolocation import streamlit_geolocation
 # ---------------------------------------------------------
 # TELEGRAM, GEOFENCING I GOOGLE APPS SCRIPT KONFIGURACIJA
 # ---------------------------------------------------------
-TELEGRAM_BOT_TOKEN = "9092555598:AAEo0k0yZGfcPB9Eb81pVvJhtY6yK5r08UI"
+TELEGRAM_BOT_TOKEN = "9092555598:AAEK9e1CQTYEEqxxjueoc2Vx6rE0EQEaD84"
 TELEGRAM_CHAT_ID = "9167363271"
 
 FIRMA_LAT = 43.3117532
