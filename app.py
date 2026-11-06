@@ -18,7 +18,7 @@ FIRMA_LON = 21.7931703
 DOZVOLJENI_RADIJUS_METARA = 150
 
 # Vaš Google Apps Script Web App URL za upis podataka
-APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtkSQUb-oULslPpfFkQ3odOsX7n1tt5gtzszJVKVirS7ZzeKsVn8us04LRh-2oIhJ5aQ/exec"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby335mchyyfn44pxpT2thYPMuLqtVvzkzjJ5dfaJ4IrmKkbkCBWo-047k3E8whxc3sB7w/exec"
 SPREADSHEET_ID = "1HZFg7Sff3buVpCfXv3B4WDOM6xj6l-GLLorCSzmHs"
 
 def posalji_telegram_poruku(tekst):
