@@ -17,7 +17,6 @@ FIRMA_LAT = 43.3117532
 FIRMA_LON = 21.7931703
 DOZVOLJENI_RADIJUS_METARA = 150
 
-# Vaš Google Apps Script Web App URL za upis i čitanje podataka
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby335mchyyfn44pxpT2thYPMuLqtVvzkzjJ5dfaJ4IrmKkbkCBWo-047k3E8whxc3sB7w/exec"
 SPREADSHEET_ID = "1HZFg7Sff3buVpCfXv3B4WDOM6xj6l-GLLorCSzmHs"
 
@@ -33,9 +32,6 @@ def posalji_telegram_poruku(tekst):
     except Exception as e:
         st.session_state.telegram_greska = str(e)
 
-        if 'telegram_greska' in st.session_state and st.session_state.telegram_greska:
-    st.error(f"Telegram greška: {st.session_state.telegram_greska}")
-    
 def izracunaj_udaljenost(lat1, lon1, lat2, lon2):
     R = 6371000
     phi1 = math.radians(lat1)
@@ -123,8 +119,14 @@ st.title("📍 Evidencija Radnog Vremena - Top Kraft Tech")
 
 if 'uspesno_evidentirano' not in st.session_state:
     st.session_state.uspesno_evidentirano = False
+if 'telegram_greska' not in st.session_state:
+    st.session_state.telegram_greska = None
 
 korisnici = ucitaj_korisnike()
+
+# Prikaz eventualne Telegram greške ako postoji
+if st.session_state.telegram_greska:
+    st.error(f"⚠️ Telegram greška: {st.session_state.telegram_greska}")
 
 if st.session_state.uspesno_evidentirano:
     st.success("✅ Evidencija je uspešno zabeležena u Google Sheets!")
@@ -309,13 +311,7 @@ else:
                 
                 dodaj_u_evidenciju(vreme_sada, izabrani_radnik, akcija, lokacija_ok)
                 
-                emoji_akcija = "🟢 PRIJAVA" if akcija == "PRIJAVA" else "🔴 ODJAVA"
-                poruka_telegram = (
-                    f"**{emoji_akcija} - Top Kraft Tech**\n\n"
-                    f"👤 **Radnik:** {izabrani_radnik}\n"
-                    f"🕒 **Vreme:** {vreme_sada}\n"
-                    f"📍 **Geofencing:** Potvrđeno"
-                )
+                poruka_telegram = f"{akcija} - Top Kraft Tech | Radnik: {izabrani_radnik} | Vreme: {vreme_sada}"
                 posalji_telegram_poruku(poruka_telegram)
                 
                 st.session_state.uspesno_evidentirano = True
