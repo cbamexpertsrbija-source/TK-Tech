@@ -10,7 +10,7 @@ from streamlit_geolocation import streamlit_geolocation
 # ---------------------------------------------------------
 # TELEGRAM, GEOFENCING I GOOGLE APPS SCRIPT KONFIGURACIJA
 # ---------------------------------------------------------
-TELEGRAM_BOT_TOKEN = "9092555598:AAFwtK5E6sH_yk8DSkKBKvc-1DAvseh5gHM"
+TELEGRAM_BOT_TOKEN = "9092555598:AAFwtK5E6sH_yk8DSkKBKvc-1DAvsehSgHM"
 TELEGRAM_CHAT_ID = "9167363271"
 
 FIRMA_LAT = 43.3117532
@@ -124,7 +124,6 @@ if 'telegram_greska' not in st.session_state:
 
 korisnici = ucitaj_korisnike()
 
-# Prikaz eventualne Telegram greške ako postoji
 if st.session_state.telegram_greska:
     st.error(f"⚠️ Telegram greška: {st.session_state.telegram_greska}")
 
