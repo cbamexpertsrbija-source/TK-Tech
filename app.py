@@ -47,8 +47,27 @@ def ucitaj_evidenciju():
         # Čitanje tabele direktno preko javnog CSV izvoza (bez gspread autentifikacije)
         csv_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1"
         df = pd.read_csv(csv_url)
+        
+        if df.empty or len(df.columns) < 4:
+            return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
+        
+        df.columns = [str(col).strip() for col in df.columns]
+        rename_map = {}
+        for col in df.columns:
+            lower_col = col.lower()
+            if 'vreme' in lower_col:
+                rename_map[col] = 'Vreme'
+            elif 'radnik' in lower_col:
+                rename_map[col] = 'Radnik'
+            elif 'akcija' in lower_col:
+                rename_map[col] = 'Akcija'
+            elif 'lokacija' in lower_col:
+                rename_map[col] = 'Lokacija_OK'
+        
+        df = df.rename(columns=rename_map)
         return df
-    except Exception:
+    except Exception as e:
+        print(f"Greška pri čitanju tabele: {e}")
         return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
 
 def dodaj_u_evidenciju(vreme, radnik, akcija, lokacija_ok):
@@ -120,7 +139,9 @@ else:
             
             with tab1:
                 df_admin = ucitaj_evidenciju()
-                if not df_admin.empty:
+                if df_admin.empty:
+                    st.warning("Tabela je trenutno prazna ili nema uspešnih upisa.")
+                else:
                     df_admin['Vreme_dt'] = pd.to_datetime(df_admin['Vreme'], errors='coerce')
                     df_admin['Mesec'] = df_admin['Vreme_dt'].dt.strftime('%Y-%m')
                     
@@ -182,8 +203,9 @@ else:
 
             with tab2:
                 st.subheader("👥 Dodavanje i brisanje radnika")
-                df_w_current = pd.read_csv(WORKERS_FILE)
-                st.dataframe(df_w_current, use_container_width=True)
+                if os.path.exists(WORKERS_FILE):
+                    df_w_current = pd.read_csv(WORKERS_FILE)
+                    st.dataframe(df_w_current, use_container_width=True)
                 
                 novi_ime = st.text_input("Ime i prezime radnika:")
                 novi_pin = st.text_input("Četvorocifreni PIN:", type="password", max_chars=4)
