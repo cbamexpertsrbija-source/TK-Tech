@@ -43,7 +43,7 @@ def izracunaj_udaljenost(lat1, lon1, lat2, lon2):
     return R * c
 
 # ---------------------------------------------------------
-# GOOGLE SHEETS KONEKCIJA (PUTEM WEB APP-A I CSV-A)
+# GOOGLE SHEETS KONEKCIJA
 # ---------------------------------------------------------
 def ucitaj_evidenciju():
     try:
@@ -195,7 +195,6 @@ else:
                     
                     st.dataframe(df_filtriran[["Vreme", "Radnik", "Akcija", "Lokacija_OK"]], use_container_width=True)
                     
-                    # Pojedinačni sati za izabranog radnika
                     if filter_radnik != "Svi radnici":
                         ukupni_sati = 0.0
                         prijava_vreme = None
@@ -210,7 +209,6 @@ else:
                         st.metric(f"Ukupno sati ({filter_radnik})", f"{ukupni_sati:.2f} h")
 
                     st.divider()
-                    # Zbirni pregled sati za sve radnike odjednom
                     st.subheader("⏱️ Zbirni pregled odrađenih sati po radnicima")
                     df_zbirni_izvor = df_admin.copy()
                     if filter_mesec != "Svi meseci":
