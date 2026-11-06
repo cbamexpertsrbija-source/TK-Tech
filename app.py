@@ -6,7 +6,8 @@ import math
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from streamlit_geolocation import streamlit_geolocation
-from streamlit_gsheets import GSheetsConnection
+import gspread
+from google.oauth2.service_account import Credentials
 
 # ---------------------------------------------------------
 # TELEGRAM I GEOFENCING KONFIGURACIJA
@@ -37,31 +38,34 @@ def izracunaj_udaljenost(lat1, lon1, lat2, lon2):
     return R * c
 
 # ---------------------------------------------------------
-# GOOGLE SHEETS KONEKCIJA
+# GOOGLE SHEETS DIREKTNA KONEKCIJA (GSPREAD)
 # ---------------------------------------------------------
-conn = st.connection("gsheets", type=GSheetsConnection)
+def otvori_radni_list():
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    client = gspread.authorize(creds)
+    
+    spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    spreadsheet = client.open_by_url(spreadsheet_url)
+    return spreadsheet.worksheet("Sheet1")
 
 def ucitaj_evidenciju():
     try:
-        df = conn.read(worksheet="Sheet1", ttl=0)
-        return df
+        worksheet = otvori_radni_list()
+        data = worksheet.get_all_records()
+        if not data:
+            return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
+        return pd.DataFrame(data)
     except Exception:
         return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
 
 def dodaj_u_evidenciju(vreme, radnik, akcija, lokacija_ok):
-    try:
-        # Pristup gspread klijentu i direktno dodavanje reda (izbegava UnsupportedOperationError)
-        client = conn.client
-        spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
-        spreadsheet = client.open_by_url(spreadsheet_url)
-        worksheet = spreadsheet.worksheet("Sheet1")
-        worksheet.append_row([str(vreme), str(radnik), str(akcija), str(lokacija_ok)])
-    except Exception as e:
-        # Rezervna metoda
-        df_postojece = ucitaj_evidenciju()
-        novi_red = pd.DataFrame([[vreme, radnik, akcija, lokacija_ok]], columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
-        df_novo = pd.concat([df_postojece, novi_red], ignore_index=True)
-        conn.write(worksheet="Sheet1", data=df_novo)
+    worksheet = otvori_radni_list()
+    worksheet.append_row([str(vreme), str(radnik), str(akcija), str(lokacija_ok)])
 
 # ---------------------------------------------------------
 # UPRAVLJANJE RADNICIMA
