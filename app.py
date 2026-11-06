@@ -24,7 +24,7 @@ SPREADSHEET_ID = "1HZFg7Sff3buVpCfXv3B4WDOM6xj6l-GLLorCSzmHs"
 def posalji_telegram_poruku(tekst):
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": tekst, "parse_mode": "Markdown"}
+        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": tekst}
         requests.post(url, json=payload, timeout=5)
     except Exception as e:
         print(f"Greška pri slanju Telegram obaveštenja: {e}")
