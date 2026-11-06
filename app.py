@@ -6,11 +6,9 @@ import math
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from streamlit_geolocation import streamlit_geolocation
-import gspread
-from google.oauth2.service_account import Credentials
 
 # ---------------------------------------------------------
-# TELEGRAM I GEOFENCING KONFIGURACIJA
+# TELEGRAM, GEOFENCING I GOOGLE APPS SCRIPT KONFIGURACIJA
 # ---------------------------------------------------------
 TELEGRAM_BOT_TOKEN = "9092555598:AAFwtK5E6sH_yk8DSkKBKvc-1DAvseh5gHM"
 TELEGRAM_CHAT_ID = "9167363271"
@@ -18,6 +16,10 @@ TELEGRAM_CHAT_ID = "9167363271"
 FIRMA_LAT = 43.3117532
 FIRMA_LON = 21.7931703
 DOZVOLJENI_RADIJUS_METARA = 150
+
+# Vaš Google Apps Script Web App URL za upis podataka
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtkSQUb-oULslPpfFkQ3odOsX7n1tt5gtzszJVKVirS7ZzeKsVn8us04LRh-2oIhJ5aQ/exec"
+SPREADSHEET_ID = "1HZFg7Sff3buVpCfXv3B4WDOM6xj6l-GLLorCSzmHs"
 
 def posalji_telegram_poruku(tekst):
     try:
@@ -38,35 +40,28 @@ def izracunaj_udaljenost(lat1, lon1, lat2, lon2):
     return R * c
 
 # ---------------------------------------------------------
-# GOOGLE SHEETS DIREKTNA KONEKCIJA (GSPREAD)
+# GOOGLE SHEETS KONEKCIJA (PUTEM WEB APP-A I CSV-A)
 # ---------------------------------------------------------
-def otvori_radni_list():
-    scope = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    creds_dict = dict(st.secrets["gcp_service_account"])
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-    client = gspread.authorize(creds)
-    
-    # Otvaranje direktno preko ključa (ID tabele) izbegava URL i gid parametar greške
-    spreadsheet_id = "1HZFg7Sff3buVpCfXv3B4WDOM6xj6l-GLLorCSzmHs"
-    spreadsheet = client.open_by_key(spreadsheet_id)
-    return spreadsheet.worksheet("Sheet1")
-
 def ucitaj_evidenciju():
     try:
-        worksheet = otvori_radni_list()
-        data = worksheet.get_all_records()
-        if not data:
-            return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
-        return pd.DataFrame(data)
+        # Čitanje tabele direktno preko javnog CSV izvoza (bez gspread autentifikacije)
+        csv_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1"
+        df = pd.read_csv(csv_url)
+        return df
     except Exception:
         return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
 
 def dodaj_u_evidenciju(vreme, radnik, akcija, lokacija_ok):
-    worksheet = otvori_radni_list()
-    worksheet.append_row([str(vreme), str(radnik), str(akcija), str(lokacija_ok)])
+    payload = {
+        "vreme": str(vreme),
+        "radnik": str(radnik),
+        "akcija": str(akcija),
+        "lokacija_ok": str(lokacija_ok)
+    }
+    try:
+        requests.post(APPS_SCRIPT_URL, json=payload, timeout=10)
+    except Exception as e:
+        print(f"Greška pri upisu u Google Sheets: {e}")
 
 # ---------------------------------------------------------
 # UPRAVLJANJE RADNICIMA
