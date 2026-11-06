@@ -49,10 +49,19 @@ def ucitaj_evidenciju():
         return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
 
 def dodaj_u_evidenciju(vreme, radnik, akcija, lokacija_ok):
-    df_postojece = ucitaj_evidenciju()
-    novi_red = pd.DataFrame([[vreme, radnik, akcija, lokacija_ok]], columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
-    df_novo = pd.concat([df_postojece, novi_red], ignore_index=True)
-    conn.update(worksheet="Sheet1", data=df_novo)
+    try:
+        # Pristup gspread klijentu i direktno dodavanje reda (izbegava UnsupportedOperationError)
+        client = conn.client
+        spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+        spreadsheet = client.open_by_url(spreadsheet_url)
+        worksheet = spreadsheet.worksheet("Sheet1")
+        worksheet.append_row([str(vreme), str(radnik), str(akcija), str(lokacija_ok)])
+    except Exception as e:
+        # Rezervna metoda
+        df_postojece = ucitaj_evidenciju()
+        novi_red = pd.DataFrame([[vreme, radnik, akcija, lokacija_ok]], columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
+        df_novo = pd.concat([df_postojece, novi_red], ignore_index=True)
+        conn.write(worksheet="Sheet1", data=df_novo)
 
 # ---------------------------------------------------------
 # UPRAVLJANJE RADNICIMA
