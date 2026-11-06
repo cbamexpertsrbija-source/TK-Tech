@@ -49,8 +49,9 @@ def otvori_radni_list():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     client = gspread.authorize(creds)
     
-    spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
-    spreadsheet = client.open_by_url(spreadsheet_url)
+    # Otvaranje direktno preko ključa (ID tabele) izbegava URL i gid parametar greške
+    spreadsheet_id = "1HZFg7Sff3buVpCfXv3B4WDOM6xj6l-GLLorCSzmHs"
+    spreadsheet = client.open_by_key(spreadsheet_id)
     return spreadsheet.worksheet("Sheet1")
 
 def ucitaj_evidenciju():
