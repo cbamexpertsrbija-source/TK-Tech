@@ -44,14 +44,17 @@ def izracunaj_udaljenost(lat1, lon1, lat2, lon2):
 # ---------------------------------------------------------
 def ucitaj_evidenciju():
     try:
-        # Čitanje tabele direktno preko javnog CSV izvoza (bez gspread autentifikacije)
-        csv_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1"
+        # Direktan i pouzdan export Google tabele u CSV format
+        csv_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid=0"
         df = pd.read_csv(csv_url)
         
         if df.empty or len(df.columns) < 4:
             return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
         
+        # Očistimo nazive kolona od eventualnih razmaka
         df.columns = [str(col).strip() for col in df.columns]
+        
+        # Mapiramo kolone bez obzira na mala/velika slova
         rename_map = {}
         for col in df.columns:
             lower_col = col.lower()
@@ -69,7 +72,6 @@ def ucitaj_evidenciju():
     except Exception as e:
         print(f"Greška pri čitanju tabele: {e}")
         return pd.DataFrame(columns=["Vreme", "Radnik", "Akcija", "Lokacija_OK"])
-
 def dodaj_u_evidenciju(vreme, radnik, akcija, lokacija_ok):
     payload = {
         "vreme": str(vreme),
