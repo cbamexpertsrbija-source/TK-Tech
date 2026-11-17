@@ -1,36 +1,30 @@
 import streamlit as st
 import pandas as pd
 import os
-import requests
 import math
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from streamlit_geolocation import streamlit_geolocation
+from streamlit_cookies_manager import EncryptedCookieManager
 
 # ---------------------------------------------------------
-# TELEGRAM, GEOFENCING I GOOGLE APPS SCRIPT KONFIGURACIJA
+# INICIJALIZACIJA KOLAČIĆA (Cookies Manager)
 # ---------------------------------------------------------
-TELEGRAM_BOT_TOKEN = "9092555598:AAEK9e1CQTYEEqxxjueoc2Vx6rE0EQEaD84"
-TELEGRAM_CHAT_ID = "9167363271"
+# Ključ za enkripciju kolačića (možete promeniti u bilo koji tajni string)
+cookies = EncryptedCookieManager(prefix="topkraft_", password="top_kraft_tajna_lozinka_2026")
 
+if not cookies.ready():
+    st.stop()
+
+# ---------------------------------------------------------
+# GEOFENCING I GOOGLE APPS SCRIPT KONFIGURACIJA
+# ---------------------------------------------------------
 FIRMA_LAT = 43.3117532
 FIRMA_LON = 21.7931703
 DOZVOLJENI_RADIJUS_METARA = 150
 
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby335mchyyfn44pxpT2thYPMuLqtVvzkzjJ5dfaJ4IrmKkbkCBWo-047k3E8whxc3sB7w/exec"
 SPREADSHEET_ID = "1HZFg7Sff3buVpCfXv3B4WDOM6xj6l-GLLorCSzmHs"
-
-def posalji_telegram_poruku(tekst):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": tekst}
-    try:
-        response = requests.post(url, json=payload, timeout=5)
-        if response.status_code != 200:
-            st.session_state.telegram_greska = response.text
-        else:
-            st.session_state.telegram_greska = None
-    except Exception as e:
-        st.session_state.telegram_greska = str(e)
 
 def izracunaj_udaljenost(lat1, lon1, lat2, lon2):
     R = 6371000
@@ -80,7 +74,9 @@ def dodaj_u_evidenciju(vreme, radnik, akcija, lokacija_ok):
         "lokacija_ok": str(lokacija_ok)
     }
     try:
-        requests.post(APPS_SCRIPT_URL, json=payload, timeout=10)
+        requests_post_url = APPS_SCRIPT_URL
+        import requests
+        requests.post(requests_post_url, json=payload, timeout=10)
     except Exception as e:
         print(f"Greška pri upisu u Google Sheets: {e}")
 
@@ -119,13 +115,8 @@ st.title("📍 Evidencija Radnog Vremena - Top Kraft Tech")
 
 if 'uspesno_evidentirano' not in st.session_state:
     st.session_state.uspesno_evidentirano = False
-if 'telegram_greska' not in st.session_state:
-    st.session_state.telegram_greska = None
 
 korisnici = ucitaj_korisnike()
-
-if st.session_state.telegram_greska:
-    st.error(f"⚠️ Telegram greška: {st.session_state.telegram_greska}")
 
 if st.session_state.uspesno_evidentirano:
     st.success("✅ Evidencija je uspešno zabeležena u Google Sheets!")
@@ -208,36 +199,6 @@ else:
                                 prijava_vreme = None
                         st.metric(f"Ukupno sati ({filter_radnik})", f"{ukupni_sati:.2f} h")
 
-                    st.divider()
-                    st.subheader("⏱️ Zbirni pregled odrađenih sati po radnicima")
-                    df_zbirni_izvor = df_admin.copy()
-                    if filter_mesec != "Svi meseci":
-                        df_zbirni_izvor = df_zbirni_izvor[df_zbirni_izvor['Mesec'] == filter_mesec]
-                    
-                    zbirni_podaci = []
-                    for radnik_ime in korisnici.keys():
-                        df_r_sati = df_zbirni_izvor[df_zbirni_izvor['Radnik'] == radnik_ime].sort_values('Vreme_dt')
-                        ukupni_sati_r = 0.0
-                        prijava_vreme_r = None
-                        
-                        for _, row in df_r_sati.iterrows():
-                            if row['Akcija'] == 'PRIJAVA':
-                                prijava_vreme_r = row['Vreme_dt']
-                            elif row['Akcija'] == 'ODJAVA' and prijava_vreme_r is not None:
-                                razlika = (row['Vreme_dt'] - prijava_vreme_r).total_seconds() / 3600
-                                if razlika > 0:
-                                    ukupni_sati_r += razlika
-                                prijava_vreme_r = None
-                                
-                        if ukupni_sati_r > 0:
-                            zbirni_podaci.append({"Radnik": radnik_ime, "Ukupno Sati": round(ukupni_sati_r, 2)})
-                    
-                    if zbirni_podaci:
-                        df_zbirno = pd.DataFrame(zbirni_podaci)
-                        st.dataframe(df_zbirno, use_container_width=True)
-                    else:
-                        st.info("Nema završenih smena za izabrani period.")
-
             with tab2:
                 st.subheader("👥 Dodavanje i brisanje radnika")
                 if os.path.exists(WORKERS_FILE):
@@ -264,8 +225,31 @@ else:
 
         if pin and pin_ispravan:
             st.success("PIN uspešno potvrđen!")
-            df_all = ucitaj_evidenciju()
             
+            # --- PROVERA UREĐAJA PREKO KOLAČIĆA ---
+            cookie_key = f"uredjaj_{izabrani_radnik.replace(' ', '_')}"
+            sacuvan_uredjaj = cookies.get(cookie_key)
+            
+            # Generišemo jedinstven identifikator za trenutni pretraživač/uređaj ako već ne postoji
+            import uuid
+            trenutni_uredjaj_id = cookies.get("browser_uuid")
+            if not trenutni_uredjaj_id:
+                trenutni_uredjaj_id = str(uuid.uuid4())
+                cookies["browser_uuid"] = trenutni_uredjaj_id
+                cookies.save()
+
+            uredjaj_pouzdan = True
+            if sacuvan_uredjaj is None:
+                # Prvi put se ovaj radnik prijavljuje sa ovog uređaja - snimamo ga
+                cookies[cookie_key] = trenutni_uredjaj_id
+                cookies.save()
+                st.info("📱 Ovo je prvi put da se prijavljujete sa ovog uređaja. Uređaj je registrovan za Vas.")
+            elif sacuvan_uredjaj != trenutni_uredjaj_id:
+                # Kolačić postoji ali pripada nekom drugom uređaju/osobi
+                uredjaj_pouzdan = False
+                st.warning("⚠️ UPOZORENJE: Prijavljujete se sa uređaja koji je ranije registrovao drugi radnik ili tuđi telefon!")
+
+            df_all = ucitaj_evidenciju()
             if not df_all.empty:
                 df_all['Vreme_dt'] = pd.to_datetime(df_all['Vreme'], errors='coerce')
                 trenutni_mesec = datetime.now(ZoneInfo("Europe/Belgrade")).strftime("%Y-%m")
@@ -306,10 +290,10 @@ else:
                 akcija = "PRIJAVA" if btn_prijava else "ODJAVA"
                 vreme_sada = datetime.now(ZoneInfo("Europe/Belgrade")).strftime("%Y-%m-%d %H:%M:%S")
                 
-                dodaj_u_evidenciju(vreme_sada, izabrani_radnik, akcija, lokacija_ok)
+                # Ako uređaj nije pouzdan, možemo označiti u tabeli kroz lokaciju ili tekst da je sumnjiv uređaj
+                status_lokacije = lokacija_ok if uredjaj_pouzdan else "SUMNJIV_UREDJAJ"
                 
-                poruka_telegram = f"{akcija} - Top Kraft Tech | Radnik: {izabrani_radnik} | Vreme: {vreme_sada}"
-                posalji_telegram_poruku(poruka_telegram)
+                dodaj_u_evidenciju(vreme_sada, izabrani_radnik, akcija, status_lokacije)
                 
                 st.session_state.uspesno_evidentirano = True
                 st.rerun()
