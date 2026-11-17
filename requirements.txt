@@ -4,3 +4,4 @@ requests
 streamlit-geolocation
 gspread
 google-auth
+streamlit-cookies-manager
